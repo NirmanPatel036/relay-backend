@@ -19,7 +19,9 @@ const app = new Hono();
 app.use('*', logger());
 app.use('*', prettyJSON());
 app.use('*', cors({
-  origin: ['http://localhost:3000', 'http://localhost:3001'],
+  origin: ['http://localhost:3000',
+           'http://localhost:3001'
+           'https://relay-agent.vercel.app'],
   credentials: true,
 }));
 app.use('*', rateLimiter());
