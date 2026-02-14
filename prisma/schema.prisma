@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model agent_metrics {
+  id            String   @id
+  agent_type    String
+  metadata      Json?
+  confidence    Float?
+  created_at    DateTime @default(now())
+  error_message String?
+  intent        String?
+  response_time Int
+  session_id    String
+  successful    Boolean
+
+  @@index([agent_type], map: "idx_agent_metrics_agent_type")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model conversations {
+  id         String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id    String     @db.Uuid
+  title      String?
+  created_at DateTime?  @default(now()) @db.Timestamptz(6)
+  updated_at DateTime?  @default(now()) @db.Timestamptz(6)
+  users      users      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  messages   messages[]
+
+  @@index([user_id], map: "idx_conversations_user_id")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model messages {
+  id              String        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  conversation_id String        @db.Uuid
+  role            String
+  content         String
+  agent_type      String?
+  reasoning       String?
+  metadata        Json?         @default("{}")
+  created_at      DateTime?     @default(now()) @db.Timestamptz(6)
+  conversations   conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  @@index([conversation_id], map: "idx_messages_conversation_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model orders {
+  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id            String    @db.Uuid
+  order_number       String    @unique
+  status             String    @default("pending")
+  total_amount       Decimal?  @db.Decimal(10, 2)
+  items              Json?     @default("[]")
+  created_at         DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime? @default(now()) @db.Timestamptz(6)
+  shipping_address   Json?
+  tracking_number    String?
+  carrier            String?
+  estimated_delivery DateTime? @db.Timestamptz(6)
+  actual_delivery    DateTime? @db.Timestamptz(6)
+  users              users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([order_number], map: "idx_orders_order_number")
+  @@index([user_id], map: "idx_orders_user_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model payments {
+  id             String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id        String    @db.Uuid
+  amount         Decimal   @db.Decimal(10, 2)
+  status         String    @default("pending")
+  payment_method String?
+  transaction_id String?
+  metadata       Json?     @default("{}")
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
+  invoice_number String?   @unique
+  description    String?
+  invoice_date   DateTime? @db.Timestamptz(6)
+  due_date       DateTime? @db.Timestamptz(6)
+  paid_date      DateTime? @db.Timestamptz(6)
+  refund_amount  Decimal?  @db.Decimal(10, 2)
+  refund_date    DateTime? @db.Timestamptz(6)
+  refund_reason  String?
+  users          users     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id], map: "idx_payments_user_id")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model users {
+  id            String          @id @db.Uuid
+  email         String          @unique
+  name          String?
+  created_at    DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime?       @default(now()) @db.Timestamptz(6)
+  tier          String          @default("free")
+  conversations conversations[]
+  orders        orders[]
+  payments      payments[]
+}
