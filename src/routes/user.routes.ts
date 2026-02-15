@@ -1,8 +1,37 @@
 import { Hono } from 'hono';
 import { PrismaClient } from '@prisma/client';
+import { UserService } from '../services/user.service.js';
 
 const userRoutes = new Hono();
 const prisma = new PrismaClient();
+const userService = new UserService();
+
+// Sync user from Supabase Auth to application database
+userRoutes.post('/sync', async (c) => {
+  try {
+    const body = await c.req.json();
+    const { userId, email, name } = body;
+
+    if (!userId || !email) {
+      return c.json({ error: 'userId and email are required' }, 400);
+    }
+
+    const user = await userService.upsertUser(userId, email, name);
+
+    return c.json({
+      message: 'User synced successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        tier: user.tier,
+      },
+    });
+  } catch (error) {
+    console.error('Error syncing user:', error);
+    return c.json({ error: 'Failed to sync user' }, 500);
+  }
+});
 
 // Get current user profile
 userRoutes.get('/me', async (c) => {
@@ -13,17 +42,7 @@ userRoutes.get('/me', async (c) => {
       return c.json({ error: 'Unauthorized' }, 401);
     }
 
-    const user = await prisma.users.findUnique({
-      where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        tier: true,
-        created_at: true,
-        updated_at: true,
-      },
-    });
+    const user = await userService.getUserById(userId);
 
     if (!user) {
       return c.json({ error: 'User not found' }, 404);
