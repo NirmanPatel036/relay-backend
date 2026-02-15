@@ -1,9 +1,14 @@
 import { PrismaClient } from '@prisma/client';
+import { UserService } from './user.service.js';
 
 const prisma = new PrismaClient();
+const userService = new UserService();
 
 export class ConversationService {
   async createConversation(userId: string, title?: string) {
+    // Ensure user exists in the database before creating conversation
+    await userService.ensureUserExists(userId);
+
     return prisma.conversations.create({
       data: {
         user_id: userId,
